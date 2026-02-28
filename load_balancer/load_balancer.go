@@ -2,32 +2,37 @@ package load_balancer
 
 import (
 	"context"
-	"net/http/httputil"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
 )
 
 type LoadBalancer struct {
-	servers  []*Backend
-	strategy LoadBalancerStrategy
-	port     int32
-	current  int64
+	backends []*Backend
+	strategy StrategyAlgorithm
 	mux      sync.RWMutex
-	proxy    httputil.ReverseProxy
 	cancel   context.CancelFunc
 }
 
-func NewLoadBalancer(urls []string, healthPath, healthInterval, healthTimeout string) (*LoadBalancer, error) {
-	var servers []*Backend
+func NewLoadBalancer(
+	urls []string,
+	strategy, healthPath, healthInterval, healthTimeout string,
+) (*LoadBalancer, error) {
+	var backends []*Backend
+	strategyAlgorithm, err := ToLoadBalancerStrategy(strategy)
+
+	if err != nil {
+		return nil, err
+	}
 
 	for _, rawUrl := range urls {
 		if newUrl, err := url.Parse(rawUrl); err == nil {
-			servers = append(servers, NewBackend(newUrl))
+			backends = append(backends, NewBackend(newUrl))
 		}
 	}
 
-	if len(servers) == 0 {
+	if len(backends) == 0 {
 		return nil, &NoBackendsError{}
 	}
 
@@ -43,16 +48,34 @@ func NewLoadBalancer(urls []string, healthPath, healthInterval, healthTimeout st
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	for _, server := range servers {
+	for _, server := range backends {
 		go server.StartHealthCheck(ctx, interval, timeout, healthPath)
 	}
 
 	return &LoadBalancer{
-		servers: servers,
-		current: 0,
-		mux:     sync.RWMutex{},
-		cancel:  cancel,
+		backends: backends,
+		mux:      sync.RWMutex{},
+		cancel:   cancel,
+		strategy: strategyAlgorithm,
 	}, nil
+}
+
+func (l *LoadBalancer) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	strategy := l.strategy
+	backend, err := strategy.NextBackend(l.backends)
+
+	if err != nil {
+		return -1, err
+	}
+
+	backend.proxy.ServeHTTP(w, r)
+	return 1, nil
+}
+
+func (l *LoadBalancer) Backends() []*Backend {
+	l.mux.RLock()
+	defer l.mux.RUnlock()
+	return l.backends
 }
 
 func (l *LoadBalancer) Stop() {

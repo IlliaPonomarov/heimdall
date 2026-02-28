@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-func ToLoadBalancerStrategy(strategyStr string) (LoadBalancerStrategy, error) {
+func ToLoadBalancerStrategy(strategyStr string) (StrategyAlgorithm, error) {
 	formatted := strings.ToUpper(strings.ReplaceAll(strategyStr, "-", "_"))
 
 	switch formatted {
 	case "ROUND_ROBIN":
-		return ROUND_ROBIN, nil
+		return &RoundRobinStrategy{}, nil
 	default:
-		return 0, &ConfigError{Field: "strategy", Value: strategyStr, Err: fmt.Errorf("unknown strategy")}
+		return nil, &ConfigError{Field: "strategy", Value: strategyStr, Err: fmt.Errorf("unknown strategy")}
 	}
 }

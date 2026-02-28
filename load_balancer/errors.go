@@ -38,3 +38,9 @@ type NoBackendsError struct{}
 func (e *NoBackendsError) Error() string {
 	return "no valid backend URLs provided"
 }
+
+type NoHealthyBackendsError struct{}
+
+func (e *NoHealthyBackendsError) Error() string {
+	return "no healthy backends provided"
+}

@@ -22,7 +22,8 @@ func main() {
 	if config.LoadBalancer.Enabled {
 		var backends = config.LoadBalancer.Resources
 		var health = config.LoadBalancer.Health
-		loadBalancer, err := load_balancer.NewLoadBalancer(backends, health.Path, health.Interval, health.Timeout)
+		var strategy = config.LoadBalancer.Strategy
+		loadBalancer, err := load_balancer.NewLoadBalancer(backends, strategy, health.Path, health.Interval, health.Timeout)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -39,7 +40,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	_, err := fmt.Fprint(w, "Hello, World!")
+	_, err := fmt.Fprint(w, "HEIMDALL REVERSE PROXY")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
