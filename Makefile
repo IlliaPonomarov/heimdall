@@ -1,7 +1,7 @@
-GO = /Users/illiaponomarov/sdk/go1.26.0/bin/go
-GOIMPORTS = /Users/illiaponomarov/go/bin/goimports
+GO ?= $(or $(shell which go 2>/dev/null),$(lastword $(wildcard $(HOME)/sdk/go*/bin/go)),go)
+GOIMPORTS ?= $(or $(shell which goimports 2>/dev/null),$(wildcard $(HOME)/go/bin/goimports),goimports)
 
-.PHONY: fmt lint test build
+.PHONY: fmt lint test build docker
 
 fmt:
 	$(GOIMPORTS) -w .
@@ -14,3 +14,6 @@ test:
 
 build: lint
 	$(GO) build ./...
+
+docker:
+	docker build -t heimdall-reverse-proxy .

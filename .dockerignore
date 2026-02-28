@@ -1,0 +1,7 @@
+.git/
+.idea/
+*.test
+reverse-proxy
+Dockerfile
+.dockerignore
+README.md
